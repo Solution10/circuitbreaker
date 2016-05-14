@@ -51,7 +51,7 @@ if ($breaker->isClosed()) {
 
 ## PHP Requirements
 
-- PHP >= 5.4
+- PHP >= 5.5
 
 ## Author
 

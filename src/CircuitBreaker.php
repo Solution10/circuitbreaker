@@ -15,6 +15,9 @@ use Doctrine\Common\Cache\Cache;
  */
 class CircuitBreaker implements CircuitBreakerInterface
 {
+    const OPEN = 'open';
+    const CLOSED = 'closed';
+
     /**
      * @var     string
      */
@@ -39,6 +42,11 @@ class CircuitBreaker implements CircuitBreakerInterface
      * @var     array
      */
     protected $failures;
+
+    /**
+     * @var     array
+     */
+    protected $changeEventHandlers = [];
 
     /**
      * @param   string      $name       Name of this breaker
@@ -116,6 +124,10 @@ class CircuitBreaker implements CircuitBreakerInterface
      */
     public function success()
     {
+        if (!$this->isClosed()) {
+            $this->fireEvent(self::OPEN, self::CLOSED);
+        }
+
         $this->failures = [];
         return $this->write();
     }
@@ -136,6 +148,10 @@ class CircuitBreaker implements CircuitBreakerInterface
             if ($time < $cooldownBound) {
                 unset($this->failures[$i]);
             }
+        }
+
+        if ($this->isOpen()) {
+            $this->fireEvent(self::CLOSED, self::OPEN);
         }
 
         return $this->write();
@@ -176,6 +192,10 @@ class CircuitBreaker implements CircuitBreakerInterface
      */
     public function forceOpen()
     {
+        if (!$this->isOpen()) {
+            $this->fireEvent(self::CLOSED, self::OPEN);
+        }
+
         $failTime = time();
         for ($i = 0; $i < $this->threshold; $i ++) {
             $this->failures[] = $failTime;
@@ -191,6 +211,22 @@ class CircuitBreaker implements CircuitBreakerInterface
     public function forceClosed()
     {
         return $this->success();
+    }
+
+    /**
+     * Binds a function to call when the breaker changes from one state to another.
+     *
+     * The callback passed should take the form:
+     *
+     *  function ($previousState, $newState)
+     *
+     * @param   callable   $callback
+     * @return  $this
+     */
+    public function onChange(callable $callback)
+    {
+        $this->changeEventHandlers[] = $callback;
+        return $this;
     }
 
     /* ----------------- Protected Helpers ------------------------ */
@@ -209,6 +245,19 @@ class CircuitBreaker implements CircuitBreakerInterface
     protected function write()
     {
         $this->storage->save($this->getCacheKey(), ['failures' => $this->failures], $this->cooldown);
+        return $this;
+    }
+
+    /**
+     * @param   string  $prev
+     * @param   string  $new
+     * @return  $this
+     */
+    protected function fireEvent($prev, $new)
+    {
+        foreach ($this->changeEventHandlers as $h) {
+            call_user_func_array($h, [$prev, $new]);
+        }
         return $this;
     }
 }

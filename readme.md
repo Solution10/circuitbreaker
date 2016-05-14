@@ -12,7 +12,7 @@ Simple circuit breaker class.
 - Adjustable thresholds
 - Adjustable cooldowns
 - Events on change
-- Any Doctine\Common\Cache backend for persistence
+- Any Doctine\Common\Cache\Cache implementation for persistence
 
 ## Installation
 
@@ -22,9 +22,25 @@ Installation is via composer, in the usual manner:
 $ composer require solution10/circuitbreaker
 ```
 
-## Documentation
+## Example usage
 
-TBD
+```php
+<?php
+
+$persistence = new \Doctrine\Common\Cache\ArrayCache();
+$breaker = new \Solution10\CircuitBreaker\CircuitBreaker('my_backend_service', $persistence);
+
+if ($breaker->isClosed()) {
+    $response = doSomething();
+    if ($response) {
+        $breaker->success();
+    } else {
+        $breaker->failure();
+    }
+} else {
+    gracefullyDegrade();
+}
+```
 
 ### Userguide
 

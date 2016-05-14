@@ -189,4 +189,61 @@ class CircuitBreakerTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(1, $c->fetch('circuitbreaker_tests')['failures']);
         $this->assertFalse(in_array($invalidTime, $c->fetch('circuitbreaker_tests')['failures']));
     }
+
+    public function testOpenEventsDontFireIncorrectly()
+    {
+        $message = false;
+
+        $c = new ArrayCache();
+        $b = new CircuitBreaker('tests', $c);
+        $b->setThreshold(5);
+        $b->onChange(
+            function ($previous, $new) use (&$message) {
+                $message = $previous.' -> '.$new;
+            }
+        );
+
+        $b->failure();
+        $b->failure();
+
+        $this->assertFalse($message);
+    }
+
+    public function testEventsFireClosedToOpen()
+    {
+        $message = false;
+
+        $c = new ArrayCache();
+        $b = new CircuitBreaker('tests', $c);
+        $b->setThreshold(1);
+        $b->onChange(
+            function ($previous, $new) use (&$message) {
+                $message = $previous.' -> '.$new;
+            }
+        );
+
+        $b->failure();
+        $this->assertEquals('closed -> open', $message);
+    }
+
+    public function testEventsFireOpenToClosed()
+    {
+        $message = false;
+
+        $c = new ArrayCache();
+        $c->save('circuitbreaker_tests', [
+            'failures' => [time()-10]
+        ]);
+
+        $b = new CircuitBreaker('tests', $c);
+        $b->setThreshold(1);
+        $b->onChange(
+            function ($previous, $new) use (&$message) {
+                $message = $previous.' -> '.$new;
+            }
+        );
+
+        $b->success();
+        $this->assertEquals('open -> closed', $message);
+    }
 }

@@ -3,6 +3,7 @@
 - [Why use a circuitbreaker](#why-use-a-circuitbreaker)
 - [Using a breaker](#using-a-breaker)
 - [Change Events](#change-events)
+- [Breaker Board](#breaker-board)
 
 ## Why use a circuitbreaker
 
@@ -95,3 +96,28 @@ $breaker->onChange(function ($previousState, $newState)) {
 
 The `$previousState` and `$newState` variables passed to the callback are constant strings
 that you can compare against `CircuitBreaker::OPEN` and `CircuitBreaker::CLOSED` to be safe.
+
+## Breaker Board
+
+Creating and keeping track of circuit breakers can be a bit of a pain. The library provides a
+BreakerBoard class to allow you to logically group and create circuit breakers.
+
+```php
+<?php
+
+$persistence = new \Doctrine\Common\Cache\ArrayCache();
+$board = new Solution10\CircuitBreaker\BreakerBoard($persistence);
+
+// You can now create/get circuit breaker instances by simply requesting them by name:
+// (Requesting the same name twice will naturally return an instance to the same circuitbreaker)
+/* @var     \Solution10\CircuitBreaker\CircuitBreaker   $userBackendBreaker     */
+$userBackendBreaker = $board->getBreaker('users');
+
+// If you don't want to use the getBreaker() factory, you can set your own breakers to the board:
+$myBreaker = new Solution10\CircuitBreaker\CircuitBreaker('snowflake', $persistence);
+$board->setBreaker($myBreaker);
+
+// And you can grab all of the circuit breakers assigned to a board like so:
+$allBreakers = $board->getBreakers();
+
+```

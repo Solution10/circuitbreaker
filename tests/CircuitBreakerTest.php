@@ -54,6 +54,11 @@ class CircuitBreakerTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($b->isOpen());
         $b->failure();
         $this->assertTrue($b->isOpen());
+
+        $this->assertCount(5, $b->getFailures());
+        foreach ($b->getFailures() as $f) {
+            $this->assertInternalType('integer', $f);
+        }
     }
 
     public function testBreakerRespectsThreshold()

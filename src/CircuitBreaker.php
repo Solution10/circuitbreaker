@@ -229,6 +229,16 @@ class CircuitBreaker implements CircuitBreakerInterface
         return $this;
     }
 
+    /**
+     * Returns the failure timestamps of this breaker.
+     *
+     * @return  int[]
+     */
+    public function getFailures()
+    {
+        return $this->failures;
+    }
+
     /* ----------------- Protected Helpers ------------------------ */
 
     /**
